@@ -32,7 +32,7 @@ cmdgpt fix
 ## Getting Started
 
 ```bash
-npm install -g cmdgpt
+npm install -g @devabdool/cmdgpt
 ```
 
 Then just type what you want to do:
@@ -75,7 +75,7 @@ export OPENAI_API_KEY=sk-...   # or ANTHROPIC_API_KEY
 ## Installation
 
 ```bash
-npm install -g cmdgpt
+npm install -g @devabdool/cmdgpt
 ```
 
 Or run locally after cloning:
