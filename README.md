@@ -1,6 +1,13 @@
 # CmdGPT
 
+[![CI](https://github.com/devabdool/CmdGPT/actions/workflows/ci.yml/badge.svg)](https://github.com/devabdool/CmdGPT/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/cmdgpt.svg)](https://www.npmjs.com/package/cmdgpt)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/devabdool/CmdGPT?style=social)](https://github.com/devabdool/CmdGPT/stargazers)
+
 **CmdGPT** is an AI-powered terminal assistant that lets developers execute commands using natural language. It detects your project type, interprets your request, generates the right commands, and executes them safely.
+
+> 💡 **No API key required** — works fully offline using built-in pattern matching. Optionally connect OpenAI or Anthropic for smarter responses.
 
 ```
 cmdgpt start my app
@@ -8,6 +15,43 @@ cmdgpt show my docker containers
 cmdgpt push my code
 cmdgpt setup laravel project
 cmdgpt fix
+```
+
+---
+
+## ⚡ CmdGPT in Action
+
+> 🎬 _Demo GIF coming soon — see [`assets/README.md`](assets/README.md) for instructions on recording your own._
+
+![CmdGPT Demo](https://raw.githubusercontent.com/devabdool/CmdGPT/main/assets/demo.gif)
+
+> _Run `cmdgpt fix` after a failed command — CmdGPT analyzes the error and suggests or applies the fix automatically._
+
+---
+
+## Getting Started
+
+```bash
+npm install -g cmdgpt
+```
+
+Then just type what you want to do:
+
+```bash
+cmdgpt start my app
+# → Detects your project type and runs the right start command
+
+cmdgpt fix
+# → Analyzes your last terminal error and suggests a fix
+
+cmdgpt explain docker compose up -d
+# → Explains what the command does in plain English
+```
+
+No configuration needed. For AI-powered responses, optionally add your API key:
+
+```bash
+export OPENAI_API_KEY=sk-...   # or ANTHROPIC_API_KEY
 ```
 
 ---
@@ -41,6 +85,56 @@ git clone https://github.com/devabdool/CmdGPT.git
 cd CmdGPT
 npm install
 npm link          # makes `cmdgpt` available globally
+```
+
+---
+
+## Real-World Examples
+
+### 🐘 Run a Laravel App
+
+```bash
+cd my-laravel-project
+cmdgpt start my app
+# → php artisan serve
+```
+
+### 🐳 Fix a Docker Error
+
+```bash
+# After a failed `docker compose up`:
+cmdgpt fix
+# → CmdGPT reads the error, explains the cause, and suggests a fix
+
+cmdgpt fix --error "Cannot connect to the Docker daemon"
+# → sudo systemctl start docker
+```
+
+### 🚀 Push Code to GitHub
+
+```bash
+cmdgpt push my code
+# → git add . && git commit -m "chore: update files" && git push
+```
+
+### 🛠️ Set Up a Brand-New Project
+
+```bash
+cmdgpt setup react
+# → npx create-react-app my-app
+
+cmdgpt setup laravel
+# → composer create-project laravel/laravel my-app
+```
+
+### ☸️ Manage Kubernetes Pods
+
+```bash
+cmdgpt list pods
+# → kubectl get pods
+
+cmdgpt restart deployment api
+# → kubectl rollout restart deployment/api
 ```
 
 ---
@@ -299,6 +393,12 @@ module.exports = { resolve, commands };
 ```
 
 Register your plugin in `core/aiInterpreter.js` by adding it to `PROJECT_PLUGIN_MAP`.
+
+---
+
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to get started.
 
 ---
 
