@@ -1,5 +1,5 @@
 {
-  "name": "cmdgpt",
+  "name": "@devabdool/cmdgpt",
   "version": "1.0.0",
   "description": "AI-powered terminal assistant that converts natural language into terminal commands",
   "main": "bin/cmdgpt.js",
