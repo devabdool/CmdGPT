@@ -39,6 +39,7 @@ const PROJECT_PLUGIN_MAP = {
 const UNIVERSAL_PATTERNS = [
   // Git – push comes before pull to avoid false matches
   { test: (s) => /\b(push|commit.{0,20}push)\b/.test(s), plugin: gitPlugin, key: 'push' },
+  { test: (s) => /\bdeploy.{0,20}(app|code|project|my)\b|\bdeploy\s*$/.test(s), plugin: gitPlugin, key: 'push' },
   { test: (s) => /\bgit\s+pull\b|\bpull\s+(code|changes|update)\b/.test(s), plugin: gitPlugin, key: 'pull' },
   { test: (s) => /\b(git\s+status|show\s+status|check\s+status)\b/.test(s), plugin: gitPlugin, key: 'status' },
   { test: (s) => /\b(git\s+log|show\s+log|commit\s+history)\b/.test(s), plugin: gitPlugin, key: 'log' },
@@ -83,9 +84,15 @@ async function interpret(intent, dir = process.cwd()) {
   const universalMatch = matchUniversal(lower);
   if (universalMatch) return universalMatch;
 
-  // 2. Project-type plugin matching
+  // 2. Setup intent: detect target framework from the intent string itself
+  if (lower.includes('setup') || lower.includes('create') || lower.includes('init')) {
+    const setupMatch = matchSetup(lower);
+    if (setupMatch) return setupMatch;
+  }
+
+  // 3. Project-type plugin matching
   const { type, details } = detectProject(dir);
-  logger.info(`Detected project: ${details}`);
+  logger.debug(`Detected project: ${details}`);
 
   const plugin = PROJECT_PLUGIN_MAP[type];
   if (plugin) {
@@ -93,19 +100,43 @@ async function interpret(intent, dir = process.cwd()) {
     if (pluginResult) return pluginResult;
   }
 
-  // 3. Generic Node.js plugin fallback for unknown types
+  // 4. Generic Node.js plugin fallback for unknown types
   if (type === 'unknown') {
     const nodeResult = nodePlugin.resolve(lower);
     if (nodeResult) return nodeResult;
   }
 
-  // 4. OpenAI fallback
+  // 5. OpenAI fallback
   if (process.env.OPENAI_API_KEY) {
     return await askOpenAI(intent, type);
   }
 
   logger.warn(`Could not interpret: "${intent}". Try setting OPENAI_API_KEY for AI-powered interpretation.`);
   return [];
+}
+
+/**
+ * Matches setup/create/init intents and returns plugin setup commands for the
+ * target framework detected within the intent string (not from the filesystem).
+ * @param {string} lower
+ * @returns {string[] | null}
+ */
+function matchSetup(lower) {
+  const SETUP_MAP = [
+    { test: (s) => /laravel/.test(s), plugin: laravelPlugin },
+    { test: (s) => /react/.test(s), plugin: nodePlugin },
+    { test: (s) => /next(js|\.js)?/.test(s), plugin: nodePlugin },
+    { test: (s) => /vue/.test(s), plugin: nodePlugin },
+    { test: (s) => /angular/.test(s), plugin: nodePlugin },
+    { test: (s) => /flutter/.test(s), plugin: flutterPlugin },
+    { test: (s) => /node/.test(s), plugin: nodePlugin },
+    { test: (s) => /docker/.test(s), plugin: dockerPlugin },
+    { test: (s) => /k8s|kubernetes/.test(s), plugin: kubernetesPlugin },
+  ];
+  for (const { test, plugin } of SETUP_MAP) {
+    if (test(lower) && plugin.commands.setup) return plugin.commands.setup;
+  }
+  return null;
 }
 
 /**

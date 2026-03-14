@@ -26,7 +26,7 @@ const logger = {
   banner() {
     console.log(chalk.cyan.bold('\n╔══════════════════════════════╗'));
     console.log(chalk.cyan.bold('║         CmdGPT v1.0.0        ║'));
-    console.log(chalk.cyan.bold('║  AI-Powered Terminal Assistant║'));
+    console.log(chalk.cyan.bold('║ AI-Powered Terminal Assistant ║'));
     console.log(chalk.cyan.bold('╚══════════════════════════════╝\n'));
   },
 };

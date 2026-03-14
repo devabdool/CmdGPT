@@ -35,7 +35,7 @@ function detectProject(dir = process.cwd()) {
   if (files.includes('Dockerfile')) {
     return { type: 'docker', details: 'Docker project' };
   }
-  if (files.includes('kubernetes') || files.includes('k8s') || hasKubernetesManifests(dir)) {
+  if (hasKubernetesManifests(dir)) {
     return { type: 'kubernetes', details: 'Kubernetes project' };
   }
   if (files.includes('package.json')) {

@@ -16,6 +16,7 @@ const commands = {
   'update packages': ['npm update'],
   'audit fix': ['npm audit fix'],
   'clean install': ['rm -rf node_modules', 'npm install'],
+  setup: ['npm init -y', 'npm install'],
 };
 
 /**
