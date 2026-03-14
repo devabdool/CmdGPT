@@ -2,6 +2,8 @@
 
 const { detectProject } = require('./projectDetector');
 const logger = require('../utils/logger');
+const { askAI, explainWithAI } = require('./aiProvider');
+const { resolveProvider } = require('./config');
 
 // Plugins
 const laravelPlugin = require('../plugins/laravel');
@@ -106,12 +108,12 @@ async function interpret(intent, dir = process.cwd()) {
     if (nodeResult) return nodeResult;
   }
 
-  // 5. OpenAI fallback
-  if (process.env.OPENAI_API_KEY) {
-    return await askOpenAI(intent, type);
+  // 5. AI provider fallback (OpenAI or Anthropic, based on config)
+  if (resolveProvider()) {
+    return await askAI(intent, type);
   }
 
-  logger.warn(`Could not interpret: "${intent}". Try setting OPENAI_API_KEY for AI-powered interpretation.`);
+  logger.warn(`Could not interpret: "${intent}". Set OPENAI_API_KEY or ANTHROPIC_API_KEY (or run \`cmdgpt config set provider <openai|anthropic>\`) for AI-powered interpretation.`);
   return [];
 }
 
@@ -154,74 +156,15 @@ function matchUniversal(lower) {
 }
 
 /**
- * Calls the OpenAI API to interpret the intent as shell commands.
- * @param {string} intent
- * @param {string} projectType
- * @returns {Promise<string[]>}
- */
-async function askOpenAI(intent, projectType) {
-  try {
-    const { OpenAI } = require('openai');
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-    const systemPrompt = `You are a terminal assistant. Given a natural language request and a project type, return ONLY the shell commands needed, one per line, with no explanation, markdown, or extra text.
-
-Project type: ${projectType}
-Operating system: ${process.platform}`;
-
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: intent },
-      ],
-      temperature: 0,
-      max_tokens: 256,
-    });
-
-    const raw = response.choices[0]?.message?.content || '';
-    return raw
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0 && !l.startsWith('#'));
-  } catch (err) {
-    logger.error(`OpenAI error: ${err.message}`);
-    return [];
-  }
-}
-
-/**
- * Asks OpenAI to explain what a command does.
+ * Explains what a shell command does.
+ * Uses the configured AI provider when available; falls back to a local lookup.
  * @param {string} command
  * @returns {Promise<string>}
  */
 async function explainCommand(command) {
-  if (!process.env.OPENAI_API_KEY) {
-    return getLocalExplanation(command);
-  }
-
-  try {
-    const { OpenAI } = require('openai');
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a helpful terminal assistant. Explain what the given command does in plain English. Be concise but thorough.',
-        },
-        { role: 'user', content: `Explain: ${command}` },
-      ],
-      temperature: 0.3,
-      max_tokens: 512,
-    });
-
-    return response.choices[0]?.message?.content || 'No explanation available.';
-  } catch (err) {
-    logger.error(`OpenAI error: ${err.message}`);
-    return getLocalExplanation(command);
-  }
+  const aiExplanation = await explainWithAI(command);
+  if (aiExplanation) return aiExplanation;
+  return getLocalExplanation(command);
 }
 
 /**
@@ -262,7 +205,7 @@ function getLocalExplanation(command) {
     if (lower.includes(key.toLowerCase())) return explanation;
   }
 
-  return `No local explanation found for "${command}". Set OPENAI_API_KEY for AI-powered explanations.`;
+  return `No local explanation found for "${command}". Set OPENAI_API_KEY or ANTHROPIC_API_KEY for AI-powered explanations.`;
 }
 
 module.exports = { interpret, explainCommand };

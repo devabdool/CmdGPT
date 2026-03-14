@@ -8,6 +8,13 @@ const { interpret, explainCommand } = require('../core/aiInterpreter');
 const { executeCommands } = require('../core/commandExecutor');
 const { detectProject } = require('../core/projectDetector');
 const { analyzeError, saveError } = require('../core/errorAnalyzer');
+const {
+  readConfig,
+  setConfigValue,
+  PROVIDERS,
+  DEFAULT_MODELS,
+  CONFIG_PATH,
+} = require('../core/config');
 
 const program = new Command();
 
@@ -162,6 +169,50 @@ program
   .option('--dir <path>', 'Target directory', process.cwd())
   .action(async (typeWords, options) => {
     await runIntent(`setup ${typeWords.join(' ')} project`, { dryRun: options.dryRun, dir: options.dir });
+  });
+
+// ──────────────────────────────────────────────────────────
+// cmdgpt config
+// View and set configuration (AI provider, model, etc.)
+// ──────────────────────────────────────────────────────────
+const configCmd = program
+  .command('config')
+  .description('View or update CmdGPT configuration');
+
+configCmd
+  .command('get [key]')
+  .description('Show the current configuration (or a single key)')
+  .action((key) => {
+    const cfg = readConfig();
+    if (key) {
+      const val = cfg[key];
+      if (val === undefined) {
+        logger.warn(`Key "${key}" is not set in the config.`);
+      } else {
+        logger.info(`${key} = ${JSON.stringify(val)}`);
+      }
+    } else {
+      if (Object.keys(cfg).length === 0) {
+        logger.info(`No config found at ${CONFIG_PATH}`);
+        logger.info(`Defaults: provider = auto-detect from env vars, models = ${JSON.stringify(DEFAULT_MODELS)}`);
+      } else {
+        logger.info(`Config (${CONFIG_PATH}):`);
+        console.log(JSON.stringify(cfg, null, 2));
+      }
+    }
+  });
+
+configCmd
+  .command('set <key> <value>')
+  .description('Set a configuration value (e.g. provider openai, provider anthropic)')
+  .action((key, value) => {
+    if (key === 'provider' && !PROVIDERS.includes(value)) {
+      logger.error(`Invalid provider "${value}". Supported providers: ${PROVIDERS.join(', ')}`);
+      process.exit(1);
+    }
+    setConfigValue(key, value);
+    logger.success(`Config updated: ${key} = ${value}`);
+    logger.info(`Saved to ${CONFIG_PATH}`);
   });
 
 // ──────────────────────────────────────────────────────────

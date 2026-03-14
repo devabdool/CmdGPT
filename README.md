@@ -23,7 +23,8 @@ cmdgpt fix
 | 💡 Command Explainer | Describe what any shell command does |
 | 🚀 Project Setup | Scaffold new projects with a single command |
 | 🔌 Plugin Architecture | Modular plugins for Laravel, Node, Docker, Git, Flutter, Kubernetes |
-| 🤖 Optional OpenAI | Enhance interpretation with GPT-4o-mini when `OPENAI_API_KEY` is set |
+| 🤖 Multi-Provider AI | Optional AI-powered interpretation via **OpenAI** (GPT-4o-mini) or **Anthropic** (Claude) |
+| ⚙️ Provider Config | Choose your AI provider with `cmdgpt config set provider <openai\|anthropic>` |
 
 ---
 
@@ -125,18 +126,66 @@ cmdgpt detect
 # ✔ Project type: Next.js (React) (nextjs)
 ```
 
+### View and Set Configuration
+
+```bash
+# Show current config
+cmdgpt config get
+
+# Set AI provider
+cmdgpt config set provider openai      # use OpenAI (GPT-4o-mini by default)
+cmdgpt config set provider anthropic   # use Anthropic (Claude)
+
+# Override the model used by a provider
+cmdgpt config set openaiModel gpt-4o
+cmdgpt config set anthropicModel claude-3-5-sonnet-20241022
+
+# Show a single key
+cmdgpt config get provider
+```
+
 ---
 
-## OpenAI Integration (Optional)
+## AI Provider Integration (Optional)
 
-CmdGPT works offline using built-in pattern matching. For advanced AI-powered interpretation, set your OpenAI API key:
+CmdGPT works **fully offline** using built-in pattern matching. For advanced AI-powered interpretation, configure a provider.
+
+### OpenAI
 
 ```bash
 export OPENAI_API_KEY=sk-...
-cmdgpt run "deploy my app to staging"
+# or pin it in config:
+cmdgpt config set provider openai
 ```
 
-When the key is set, CmdGPT uses **GPT-4o-mini** to interpret requests it couldn't resolve locally, and provides richer explanations and error analysis.
+CmdGPT will use **GPT-4o-mini** by default. Override:
+
+```bash
+cmdgpt config set openaiModel gpt-4o
+```
+
+### Anthropic (Claude)
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+# or pin it in config:
+cmdgpt config set provider anthropic
+```
+
+CmdGPT will use **Claude 3 Haiku** by default. Override:
+
+```bash
+cmdgpt config set anthropicModel claude-3-5-sonnet-20241022
+```
+
+### Provider Priority
+
+When both API keys are set, CmdGPT picks the provider in this order:
+
+1. `provider` field in `~/.cmdgpt.json` (set with `cmdgpt config set provider`)
+2. `OPENAI_API_KEY` env var → `openai`
+3. `ANTHROPIC_API_KEY` env var → `anthropic`
+4. No AI (offline pattern matching only)
 
 ---
 
@@ -147,6 +196,8 @@ cmdgpt/
 ├── bin/
 │   └── cmdgpt.js          # CLI entry point
 ├── core/
+│   ├── config.js           # Read/write ~/.cmdgpt.json; resolve provider/model/key
+│   ├── aiProvider.js       # Unified AI provider (OpenAI + Anthropic)
 │   ├── projectDetector.js  # Detects project type from working directory files
 │   ├── aiInterpreter.js    # Interprets natural language into commands
 │   ├── commandExecutor.js  # Executes commands sequentially with streaming output
@@ -162,6 +213,7 @@ cmdgpt/
 ├── utils/
 │   └── logger.js           # Colored console logger
 ├── tests/
+│   ├── config.test.js
 │   ├── securityFilter.test.js
 │   ├── projectDetector.test.js
 │   ├── aiInterpreter.test.js

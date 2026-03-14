@@ -4,6 +4,8 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const logger = require('../utils/logger');
+const { analyzeWithAI } = require('./aiProvider');
+const { resolveProvider } = require('./config');
 
 /**
  * Default path where CmdGPT stores the last terminal error.
@@ -32,8 +34,8 @@ function readLastError() {
 }
 
 /**
- * Analyzes the last terminal error and either uses OpenAI or local heuristics
- * to explain the issue and suggest fix commands.
+ * Analyzes the last terminal error and either uses the configured AI provider
+ * or local heuristics to explain the issue and suggest fix commands.
  *
  * @param {string} [errorText] - Override error text (defaults to last saved error).
  * @returns {Promise<{ explanation: string, fixes: string[] }>}
@@ -49,59 +51,14 @@ async function analyzeError(errorText) {
   logger.info('Analyzing error...\n');
   logger.info(`Error:\n${error}\n`);
 
-  // Try OpenAI first
-  if (process.env.OPENAI_API_KEY) {
-    return await analyzeWithOpenAI(error);
+  // Try the configured AI provider first
+  if (resolveProvider()) {
+    const aiResult = await analyzeWithAI(error);
+    if (aiResult) return aiResult;
   }
 
   // Fall back to local heuristic analysis
   return analyzeLocally(error);
-}
-
-/**
- * Sends the error to OpenAI for analysis.
- * @param {string} error
- * @returns {Promise<{ explanation: string, fixes: string[] }>}
- */
-async function analyzeWithOpenAI(error) {
-  try {
-    const { OpenAI } = require('openai');
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-    const prompt = `A developer encountered the following terminal error:
-
-\`\`\`
-${error}
-\`\`\`
-
-Please:
-1. Explain what this error means in plain English.
-2. List the exact shell commands needed to fix it (one per line, inside a JSON array under the key "fixes").
-
-Respond in JSON format:
-{
-  "explanation": "<plain-English explanation>",
-  "fixes": ["<command1>", "<command2>"]
-}`;
-
-    const response = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0,
-      max_tokens: 512,
-      response_format: { type: 'json_object' },
-    });
-
-    const content = response.choices[0]?.message?.content || '{}';
-    const parsed = JSON.parse(content);
-    return {
-      explanation: parsed.explanation || 'No explanation.',
-      fixes: Array.isArray(parsed.fixes) ? parsed.fixes : [],
-    };
-  } catch (err) {
-    logger.error(`OpenAI error: ${err.message}`);
-    return analyzeLocally(error);
-  }
 }
 
 /**
@@ -173,7 +130,7 @@ function analyzeLocally(error) {
     return result;
   }
 
-  result.explanation = 'An error occurred. Set OPENAI_API_KEY for a detailed AI-powered analysis.';
+  result.explanation = 'An error occurred. Set OPENAI_API_KEY or ANTHROPIC_API_KEY for a detailed AI-powered analysis.';
   result.fixes = [];
   return result;
 }
